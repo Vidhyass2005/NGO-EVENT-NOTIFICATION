@@ -92,14 +92,43 @@ const sendAdminNewEventEmail = async (user, event) => {
 };
 
 // ─── ADMIN EMAIL 2: User registers ──────────────────────
-const sendAdminRegistrationEmail = async (user, event) => {
+const sendAdminRegistrationEmail = async (user, event, details = {}) => {
   const admins = await getAdminEmails();
+  const detailRows = [
+    details.fullName     ? row('Full Name',    `<strong>${details.fullName}</strong>`) : '',
+    details.phone        ? row('Phone',        details.phone) : '',
+    details.age          ? row('Age',          details.age) : '',
+    details.gender       ? row('Gender',       details.gender) : '',
+    details.address      ? row('Address',      details.address) : '',
+    details.organization ? row('Organisation', details.organization) : '',
+    details.experience   ? row('Experience',   `<em>${details.experience}</em>`) : '',
+    details.motivation   ? row('Motivation',   `<em>${details.motivation}</em>`) : '',
+    (details.emergencyContact?.name || details.emergencyContact?.phone)
+      ? row('Emergency Contact', `${details.emergencyContact?.name || '—'} · ${details.emergencyContact?.phone || '—'}`)
+      : '',
+  ].filter(Boolean).join('');
+
   for (const admin of admins) {
-    sendEmail({ to: admin.email, subject: `🎫 New Registration — "${event.title}"`,
-      html: wrap(`<div style="margin-bottom:20px">${badge('New Registration','#22d3ee')}</div>
+    sendEmail({
+      to:      admin.email,
+      subject: `🎫 New Registration — "${event.title}"`,
+      html: wrap(`
+        <div style="margin-bottom:16px">${badge('New Registration', '#22d3ee')}</div>
         <h2 style="color:#0f172a;margin:0 0 8px">A Volunteer Registered</h2>
-        ${table(row('Volunteer',`<strong>${user.name}</strong>`) + row('Email',user.email) + row('Org',user.organization||'—') + row('Event',`<strong>${event.title}</strong>`) + row('Event Date',fmtDate(event.date)) + row('Capacity',`${event.currentParticipants+1} / ${event.maxParticipants}`))}
-        ${btn('View Participants', process.env.CLIENT_URL)}`)
+        <p style="color:#475569;font-size:13px;margin:0 0 16px">
+          Account: <strong>${user.name}</strong> (${user.email})
+        </p>
+        ${table(
+          row('Event', `<strong>${event.title}</strong>`) +
+          row('Date',  fmtDate(event.date)) +
+          row('Slots', `${event.currentParticipants + 1} / ${event.maxParticipants}`)
+        )}
+        ${detailRows ? `
+          <p style="color:#0f172a;font-weight:600;font-size:13px;margin:20px 0 8px">Registration Form Details</p>
+          ${table(detailRows)}
+        ` : ''}
+        ${btn('View Participants', process.env.CLIENT_URL || 'http://localhost:3000')}
+      `),
     }).catch(console.error);
   }
 };

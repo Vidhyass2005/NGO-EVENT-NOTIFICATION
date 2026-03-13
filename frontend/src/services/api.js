@@ -25,7 +25,7 @@ API.interceptors.response.use(
 );
 
 export const authAPI = {
-  register: (data) => API.post('/api/auth/register', data),
+  register: (eventId, details) => API.post(`/api/participation/register/${eventId}`, details),
   login:    (data) => API.post('/api/auth/login', data),
   getMe:    ()     => API.get('/api/auth/me'),
   updateProfile: (data) => API.put('/api/auth/profile', data),

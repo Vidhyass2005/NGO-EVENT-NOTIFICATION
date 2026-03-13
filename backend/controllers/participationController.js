@@ -18,35 +18,60 @@ const registerForEvent = async (req, res, next) => {
     if (!event)
       return res.status(404).json({ success: false, message: 'Event not found' });
     if (event.status !== 'approved')
-      return res.status(400).json({ success: false, message: 'Event not open for registration' });
+      return res.status(400).json({ success: false, message: 'Event is not open for registration' });
     if (event.currentParticipants >= event.maxParticipants)
       return res.status(400).json({ success: false, message: 'Event is full' });
 
     const existing = await Participation.findOne({ user: req.user._id, event: event._id });
     if (existing)
-      return res.status(409).json({ success: false, message: 'Already registered' });
+      return res.status(409).json({ success: false, message: 'Already registered for this event' });
 
-    const participation = await Participation.create({ user: req.user._id, event: event._id });
-    await Event.findByIdAndUpdate(event._id, { $inc: { currentParticipants: 1 } });
+    const {
+      fullName, phone, age, gender, address,
+      organization, experience, motivation,
+      emergencyContactName, emergencyContactPhone,
+    } = req.body;
 
-    // Real-time attendance update
-    req.io.to(`event_${event._id}`).emit('attendance_update', {
-      eventId: event._id,
-      currentParticipants: event.currentParticipants + 1
+    if (!fullName || !fullName.trim())
+      return res.status(400).json({ success: false, message: 'Full name is required' });
+    if (!phone || !phone.trim())
+      return res.status(400).json({ success: false, message: 'Phone number is required' });
+
+    const participation = await Participation.create({
+      user:  req.user._id,
+      event: event._id,
+      participantDetails: {
+        fullName:     fullName.trim(),
+        phone:        phone.trim(),
+        age:          age ? Number(age) : undefined,
+        gender:       gender || 'Prefer not to say',
+        address:      address?.trim() || '',
+        organization: organization?.trim() || '',
+        experience:   experience?.trim() || '',
+        motivation:   motivation?.trim() || '',
+        emergencyContact: {
+          name:  emergencyContactName?.trim() || '',
+          phone: emergencyContactPhone?.trim() || '',
+        },
+      },
     });
 
-    // In-app notification to user
+    await Event.findByIdAndUpdate(event._id, { $inc: { currentParticipants: 1 } });
+
+    req.io.to(`event_${event._id}`).emit('attendance_update', {
+      eventId: event._id, currentParticipants: event.currentParticipants + 1,
+    });
+
     const notif = await Notification.create({
-      recipient: req.user._id,
-      title: '🎫 Registered!',
-      message: `You are registered for "${event.title}".`,
-      type: 'registration',
-      relatedEvent: event._id
+      recipient:    req.user._id,
+      title:        '🎫 Registration Confirmed!',
+      message:      `You are registered for "${event.title}" on ${new Date(event.date).toLocaleDateString()}. See you there!`,
+      type:         'registration',
+      relatedEvent: event._id,
     });
     req.io.to(`user_${req.user._id}`).emit('notification', notif);
 
-    // ✉️ Admin email: new registration
-    sendAdminRegistrationEmail(req.user, event).catch(console.error);
+    sendAdminRegistrationEmail(req.user, event, participation.participantDetails).catch(console.error);
 
     res.status(201).json({ success: true, participation });
   } catch (err) { next(err); }
