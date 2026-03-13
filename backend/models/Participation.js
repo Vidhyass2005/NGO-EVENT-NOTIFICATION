@@ -5,6 +5,7 @@ const participationSchema = new mongoose.Schema({
   user:  { type: mongoose.Schema.Types.ObjectId, ref: 'User',  required: true },
   event: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
 
+  // ── Registration details filled by participant ──────────
   participantDetails: {
     fullName:     { type: String, default: '' },
     phone:        { type: String, default: '' },
@@ -12,8 +13,8 @@ const participationSchema = new mongoose.Schema({
     gender:       { type: String, enum: ['Male','Female','Other','Prefer not to say'], default: 'Prefer not to say' },
     address:      { type: String, default: '' },
     organization: { type: String, default: '' },
-    experience:   { type: String, default: '' },
-    motivation:   { type: String, default: '' },
+    experience:   { type: String, default: '' },  // prior volunteering experience
+    motivation:   { type: String, default: '' },  // why they want to join
     emergencyContact: {
       name:  { type: String, default: '' },
       phone: { type: String, default: '' },

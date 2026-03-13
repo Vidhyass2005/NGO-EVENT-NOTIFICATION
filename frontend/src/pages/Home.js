@@ -11,6 +11,7 @@ import RegisterModal from '../components/RegisterModal';
 
 const CATEGORIES = ['All','Education','Health','Environment','Community','Fundraiser','Workshop','Other'];
 
+// Admin tabs — filter by DB status
 const ADMIN_TABS = [
   { value: 'approved',  label: '📅 Upcoming'  },
   { value: 'completed', label: '✅ Completed'  },
@@ -18,6 +19,7 @@ const ADMIN_TABS = [
   { value: 'cancelled', label: '❌ Cancelled'  },
 ];
 
+// Volunteer tabs — split approved events by date client-side
 const VOLUNTEER_TABS = [
   { value: 'current', label: 'Current Events', icon: CalendarCheck },
   { value: 'past',    label: 'Past Events',    icon: CalendarClock  },
@@ -40,9 +42,11 @@ export default function Home() {
   const [form,           setForm]           = useState(EMPTY_FORM);
   const [registerEvent,  setRegisterEvent]  = useState(null);
 
+  // Admin uses DB-status tab; volunteer uses current/past split
   const [adminTab,     setAdminTab]     = useState('approved');
   const [volunteerTab, setVolunteerTab] = useState('current');
 
+  // ── Fetch events ─────────────────────────────────────────
   const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
@@ -51,8 +55,9 @@ export default function Home() {
         params.status = adminTab;
         params.all    = 'true';
       } else {
+        // Fetch ALL approved events — split by date on the client
         params.status = 'approved';
-        params.limit  = 200;
+        params.limit  = 200; // generous limit so we get everything
       }
       if (category !== 'All') params.category = category;
       const res = await eventAPI.getAll(params);
@@ -64,12 +69,14 @@ export default function Home() {
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
+  // ── Load registered IDs ───────────────────────────────────
   useEffect(() => {
     participationAPI.myHistory()
       .then(res => setRegisteredIds(new Set(res.data.history.map(p => p.event?._id))))
       .catch(() => {});
   }, []);
 
+  // ── Real-time event updates ───────────────────────────────
   useEffect(() => {
     const handler = (data) => {
       if (data.type === 'new_event')       fetchEvents();
@@ -84,23 +91,26 @@ export default function Home() {
     return () => off('event_update', handler);
   }, [on, off, fetchEvents]);
 
-  // Split approved events by date for volunteer view
+  // ── Volunteer: split events into current / past ───────────
   const currentEvents = events.filter(e => !isEventPast(e.date));
   const pastEvents    = events.filter(e =>  isEventPast(e.date));
   const volunteerList = volunteerTab === 'current' ? currentEvents : pastEvents;
 
+  // ── Apply search + category filter ───────────────────────
   const applyFilters = (list) => list.filter(e =>
-    e.title.toLowerCase().includes(search.toLowerCase()) ||
-    e.location.toLowerCase().includes(search.toLowerCase())
+    (e.title.toLowerCase().includes(search.toLowerCase()) ||
+     e.location.toLowerCase().includes(search.toLowerCase()))
   );
 
   const displayEvents = applyFilters(isAdmin ? events : volunteerList);
 
+  // ── Open registration modal ───────────────────────────────
   const handleRegisterClick = (eventId) => {
     const event = events.find(e => e._id === eventId);
     if (event) setRegisterEvent(event);
   };
 
+  // ── Submit registration form ──────────────────────────────
   const handleRegisterSubmit = async (eventId, formDetails) => {
     setActionLoading(true);
     try {
@@ -116,6 +126,7 @@ export default function Home() {
     } finally { setActionLoading(false); }
   };
 
+  // ── Cancel registration ───────────────────────────────────
   const handleCancelReg = async (id) => {
     setActionLoading(true);
     try {
@@ -130,6 +141,7 @@ export default function Home() {
     } finally { setActionLoading(false); }
   };
 
+  // ── Admin: approve ────────────────────────────────────────
   const handleApprove = async (id) => {
     setActionLoading(true);
     try {
@@ -141,6 +153,7 @@ export default function Home() {
     } finally { setActionLoading(false); }
   };
 
+  // ── Admin: complete ───────────────────────────────────────
   const handleComplete = async (id) => {
     if (!window.confirm('Mark this event as completed?\nAll registered participants will be marked as attended.')) return;
     setActionLoading(true);
@@ -153,6 +166,7 @@ export default function Home() {
     } finally { setActionLoading(false); }
   };
 
+  // ── Admin: cancel ─────────────────────────────────────────
   const handleCancel = async (id) => {
     const reason = window.prompt('Enter cancellation reason:\n(Will be shown to all registered participants)');
     if (reason === null) return;
@@ -166,6 +180,7 @@ export default function Home() {
     } finally { setActionLoading(false); }
   };
 
+  // ── Create event ─────────────────────────────────────────
   const handleCreate = async (e) => {
     e.preventDefault();
     setActionLoading(true);
@@ -180,6 +195,7 @@ export default function Home() {
     } finally { setActionLoading(false); }
   };
 
+  // ── Tab bar renderer ──────────────────────────────────────
   const TabBar = ({ tabs, active, onChange, counts }) => (
     <div className="flex gap-1 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
       {tabs.map(tab => {
@@ -215,6 +231,7 @@ export default function Home() {
   return (
     <div className="page-container">
 
+      {/* ── Page header ── */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-bold text-3xl">Events</h1>
@@ -229,11 +246,16 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Filters */}
+      {/* ── Filters ── */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by title or location..." className="input pl-9" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by title or location..."
+            className="input pl-9"
+          />
         </div>
         <select value={category} onChange={e => setCategory(e.target.value)} className="input sm:w-44">
           {CATEGORIES.map(c => <option key={c}>{c}</option>)}
@@ -243,22 +265,29 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Admin tabs */}
+      {/* ── ADMIN TABS — filter by DB status ── */}
       {isAdmin && (
-        <TabBar tabs={ADMIN_TABS} active={adminTab} onChange={setAdminTab} />
+        <TabBar
+          tabs={ADMIN_TABS}
+          active={adminTab}
+          onChange={setAdminTab}
+        />
       )}
 
-      {/* Volunteer tabs with live counts */}
+      {/* ── VOLUNTEER TABS — Current / Past split by date ── */}
       {!isAdmin && !loading && (
         <TabBar
           tabs={VOLUNTEER_TABS}
           active={volunteerTab}
           onChange={(v) => { setVolunteerTab(v); setSearch(''); }}
-          counts={{ current: currentEvents.length, past: pastEvents.length }}
+          counts={{
+            current: currentEvents.length,
+            past:    pastEvents.length,
+          }}
         />
       )}
 
-      {/* Volunteer empty states */}
+      {/* ── Volunteer: empty state per tab ── */}
       {!isAdmin && !loading && volunteerTab === 'current' && currentEvents.length === 0 && (
         <div className="text-center py-16 mb-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700">
           <p className="text-4xl mb-3">🗓️</p>
@@ -266,6 +295,7 @@ export default function Home() {
           <p className="text-slate-500 text-sm">Check back soon or create a new event to get started.</p>
         </div>
       )}
+
       {!isAdmin && !loading && volunteerTab === 'past' && pastEvents.length === 0 && (
         <div className="text-center py-16 mb-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700">
           <p className="text-4xl mb-3">📚</p>
@@ -274,12 +304,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* Events grid */}
+      {/* ── Events grid ── */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[...Array(6)].map((_, i) => <div key={i} className="h-72 card animate-pulse bg-slate-100 dark:bg-slate-800" />)}
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-72 card animate-pulse bg-slate-100 dark:bg-slate-800" />
+          ))}
         </div>
-      ) : displayEvents.length === 0 && (isAdmin || volunteerList.length > 0) ? (
+      ) : displayEvents.length === 0 && (isAdmin || (volunteerTab === 'current' && currentEvents.length > 0) || (volunteerTab === 'past' && pastEvents.length > 0)) ? (
         <div className="text-center py-20">
           <p className="text-5xl mb-4">🔍</p>
           <h3 className="font-semibold text-lg mb-1">No results match your search</h3>
@@ -288,7 +320,9 @@ export default function Home() {
       ) : displayEvents.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {displayEvents.map(event => (
-            <EventCard key={event._id} event={event}
+            <EventCard
+              key={event._id}
+              event={event}
               isRegistered={registeredIds.has(event._id)}
               loading={actionLoading}
               onRegister={handleRegisterClick}
@@ -301,7 +335,7 @@ export default function Home() {
         </div>
       ) : null}
 
-      {/* Registration Form Modal */}
+      {/* ── Registration Form Modal ── */}
       {registerEvent && (
         <RegisterModal
           event={registerEvent}
@@ -311,10 +345,12 @@ export default function Home() {
         />
       )}
 
-      {/* Create Event Modal */}
+      {/* ── Create Event Modal ── */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={e => e.target === e.currentTarget && setShowCreate(false)}>
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={e => e.target === e.currentTarget && setShowCreate(false)}
+        >
           <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 animate-slide-in">
             <h2 className="font-bold text-xl mb-1">Create New Event</h2>
             <p className="text-sm text-slate-500 mb-6">It will be submitted for admin approval before going live.</p>

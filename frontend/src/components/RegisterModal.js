@@ -28,6 +28,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
+  // ── Validate each step before proceeding ─────────────────
   const validateStep = () => {
     const e = {};
     if (step === 0) {
@@ -74,7 +75,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
     >
       <div className="card w-full max-w-lg max-h-[92vh] overflow-y-auto animate-slide-in">
 
-        {/* Header */}
+        {/* ── Header ── */}
         <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-6 pt-6 pb-4 z-10">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex-1 min-w-0">
@@ -111,7 +112,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
           </div>
         </div>
 
-        {/* Form */}
+        {/* ── Form ── */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
 
           {/* STEP 0 — Personal Info */}
@@ -155,6 +156,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
                     placeholder="21"
                   />
                 </Field>
+
                 <Field label="Gender">
                   <select value={form.gender} onChange={e => set('gender', e.target.value)} className="input">
                     <option>Male</option>
@@ -258,7 +260,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
                 </div>
               </Field>
 
-              {/* Summary card */}
+              {/* Confirmation summary card */}
               <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1.5">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Registration Summary</p>
                 {[
@@ -277,7 +279,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
             </>
           )}
 
-          {/* Navigation */}
+          {/* ── Navigation buttons ── */}
           <div className="flex gap-3 pt-2">
             {step > 0 ? (
               <button type="button" onClick={prevStep} className="btn-outline flex-1 justify-center">
