@@ -32,13 +32,11 @@ const registerForEvent = async (req, res, next) => {
       emergencyContactName, emergencyContactPhone,
     } = req.body;
 
-    // Validate required fields
     if (!fullName || !String(fullName).trim())
       return res.status(400).json({ success: false, message: 'Full name is required' });
     if (!phone || !String(phone).trim())
       return res.status(400).json({ success: false, message: 'Phone number is required' });
 
-    // Safe gender — only allow valid enum values
     const VALID_GENDERS = ['Male', 'Female', 'Other', 'Prefer not to say'];
     const safeGender = VALID_GENDERS.includes(gender) ? gender : 'Prefer not to say';
 
@@ -63,13 +61,11 @@ const registerForEvent = async (req, res, next) => {
 
     await Event.findByIdAndUpdate(event._id, { $inc: { currentParticipants: 1 } });
 
-    // Real-time count update
     req.io.to(`event_${event._id}`).emit('attendance_update', {
       eventId:             event._id,
       currentParticipants: event.currentParticipants + 1,
     });
 
-    // In-app notification
     const notif = await Notification.create({
       recipient:    req.user._id,
       title:        '🎫 Registration Confirmed!',
@@ -79,7 +75,6 @@ const registerForEvent = async (req, res, next) => {
     });
     req.io.to(`user_${req.user._id}`).emit('notification', notif);
 
-    // Email admins
     sendAdminRegistrationEmail(req.user, event, participation.participantDetails).catch(console.error);
 
     console.log('✅ Registration successful for', req.user.name, '→', event.title);
@@ -132,12 +127,18 @@ const submitFeedback = async (req, res, next) => {
 
     const participation = await Participation.findOne({
       user: req.user._id, event: req.params.eventId,
-    }).populate('event', 'title date location category');
+    }).populate('event', 'title date location category status');
 
     if (!participation)
       return res.status(404).json({ success: false, message: 'You are not registered for this event' });
-    if (participation.status !== 'attended')
-      return res.status(403).json({ success: false, message: 'Feedback only available for attended events' });
+
+    // Allow feedback if: attended, OR event is completed, OR event date has passed
+    const eventPast   = participation.event?.date && new Date(participation.event.date) < new Date();
+    const eventDone   = participation.event?.status === 'completed';
+    const canFeedback = participation.status === 'attended' || eventPast || eventDone;
+    if (!canFeedback)
+      return res.status(403).json({ success: false, message: 'Feedback is only available after the event ends' });
+
     if (participation.feedback?.rating)
       return res.status(409).json({ success: false, message: 'Feedback already submitted' });
 

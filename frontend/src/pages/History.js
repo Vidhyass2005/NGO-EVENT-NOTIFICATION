@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Award, MessageSquare, CheckCircle } from 'lucide-react';
+import { isEventPast } from '../utils/helpers';
 import { participationAPI } from '../services/api';
 import { formatDate, getStatusColor, getCategoryColor, getCategoryIcon } from '../utils/helpers';
 import FeedbackModal from '../components/FeedbackModal';
@@ -11,7 +12,7 @@ const STAR_COLORS = ['', '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e'];
 export default function History() {
   const [history,  setHistory]  = useState([]);
   const [loading,  setLoading]  = useState(true);
-  const [selected, setSelected] = useState(null); // participation for feedback modal
+  const [selected, setSelected] = useState(null);
 
   const fetchHistory = () => {
     setLoading(true);
@@ -62,8 +63,12 @@ export default function History() {
         <div className="space-y-4">
           {history.map((p) => {
             const { _id, event, status, registeredAt, feedback } = p;
-            const hasFeedback  = !!feedback?.rating;
-            const canFeedback  = status === 'attended' && !hasFeedback;
+            const hasFeedback = !!feedback?.rating;
+
+            // Show feedback button if: attended, OR event is completed, OR event date is past
+            const eventPast   = isEventPast(event?.date);
+            const eventDone   = event?.status === 'completed';
+            const canFeedback = (status === 'attended' || eventPast || eventDone) && !hasFeedback;
 
             return (
               <div key={_id} className="card p-5 hover:shadow-md transition-shadow">
