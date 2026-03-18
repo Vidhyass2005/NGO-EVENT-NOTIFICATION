@@ -18,9 +18,27 @@ const EMPTY_FORM = {
   emergencyContactPhone:'',
 };
 
+// ── Field wrapper — defined OUTSIDE the modal component ──────
+// This is the root cause fix: if Field is inside the component,
+// React treats it as a new component on every render → unmounts
+// the input → cursor disappears after every keystroke.
+const Field = ({ label, error, required, children }) => (
+  <div>
+    <label className="label">
+      {label} {required && <span className="text-red-400">*</span>}
+    </label>
+    {children}
+    {error && (
+      <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+        <AlertCircle size={11} /> {error}
+      </p>
+    )}
+  </div>
+);
+
 export default function RegisterModal({ event, onClose, onSubmit, loading }) {
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [step,   setStep]   = useState(0);
+  const [form,   setForm]   = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
   const set = (field, value) => {
@@ -28,7 +46,6 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
-  // ── Validate each step before proceeding ─────────────────
   const validateStep = () => {
     const e = {};
     if (step === 0) {
@@ -54,20 +71,6 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
     onSubmit(event._id, form);
   };
 
-  const Field = ({ label, error, required, children }) => (
-    <div>
-      <label className="label">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      {children}
-      {error && (
-        <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-          <AlertCircle size={11} /> {error}
-        </p>
-      )}
-    </div>
-  );
-
   return (
     <div
       className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
@@ -75,7 +78,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
     >
       <div className="card w-full max-w-lg max-h-[92vh] overflow-y-auto animate-slide-in">
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-6 pt-6 pb-4 z-10">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex-1 min-w-0">
@@ -83,20 +86,20 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
               <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">{event.title}</p>
               <p className="text-xs text-brand-500 mt-1">{formatDate(event.date)} · {event.location}</p>
             </div>
-            <button onClick={onClose} className="btn-ghost p-1.5 flex-shrink-0">
+            <button type="button" onClick={onClose} className="btn-ghost p-1.5 flex-shrink-0">
               <X size={18} />
             </button>
           </div>
 
           {/* Step progress */}
-          <div className="flex items-center gap-0">
+          <div className="flex items-center">
             {STEPS.map((label, i) => (
               <div key={i} className="flex items-center flex-1">
                 <div className="flex flex-col items-center gap-1">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                    i < step  ? 'bg-green-500 text-white' :
+                    i < step   ? 'bg-green-500 text-white' :
                     i === step ? 'bg-brand-400 text-slate-900' :
-                    'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                 'bg-slate-100 dark:bg-slate-800 text-slate-400'
                   }`}>
                     {i < step ? <CheckCircle size={14} /> : i + 1}
                   </div>
@@ -112,7 +115,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
           </div>
         </div>
 
-        {/* ── Form ── */}
+        {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
 
           {/* STEP 0 — Personal Info */}
@@ -207,7 +210,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
                   onChange={e => set('experience', e.target.value)}
                   className="input resize-none"
                   rows={3}
-                  placeholder="Briefly describe any past volunteering or community work (or 'None' if first time)..."
+                  placeholder="Briefly describe any past volunteering (or 'None' if first time)..."
                 />
               </Field>
 
@@ -259,7 +262,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
                 </div>
               </Field>
 
-              {/* Confirmation summary card */}
+              {/* Summary */}
               <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1.5">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Registration Summary</p>
                 {[
@@ -278,7 +281,7 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
             </>
           )}
 
-          {/* ── Navigation buttons ── */}
+          {/* Navigation */}
           <div className="flex gap-3 pt-2">
             {step > 0 ? (
               <button type="button" onClick={prevStep} className="btn-outline flex-1 justify-center">
