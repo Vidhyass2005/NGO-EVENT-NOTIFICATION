@@ -129,7 +129,6 @@ export default function RegisterModal({ event, onClose, onSubmit, loading }) {
                   onChange={e => set('fullName', e.target.value)}
                   className={`input ${errors.fullName ? 'border-red-400 focus:ring-red-400' : ''}`}
                   placeholder="Vidhya S"
-                  autoFocus
                 />
               </Field>
 
