@@ -11,9 +11,6 @@ const {
 // ── POST /api/participation/register/:eventId ──────────────
 const registerForEvent = async (req, res, next) => {
   try {
-    console.log('📝 Register request body:', JSON.stringify(req.body));
-    console.log('👤 User:', req.user?._id, req.user?.name);
-
     const event = await Event.findById(req.params.eventId).populate('createdBy', 'name email');
     if (!event)
       return res.status(404).json({ success: false, message: 'Event not found' });
@@ -77,10 +74,9 @@ const registerForEvent = async (req, res, next) => {
 
     sendAdminRegistrationEmail(req.user, event, participation.participantDetails).catch(console.error);
 
-    console.log('✅ Registration successful for', req.user.name, '→', event.title);
     res.status(201).json({ success: true, participation });
   } catch (err) {
-    console.error('❌ Registration error:', err.message, err.stack);
+    console.error('Register error:', err.message);
     next(err);
   }
 };
@@ -120,34 +116,52 @@ const markAttendance = async (req, res, next) => {
 const submitFeedback = async (req, res, next) => {
   try {
     const { rating, emoji, comment } = req.body;
-    if (!rating || rating < 1 || rating > 5)
+
+    if (!rating || Number(rating) < 1 || Number(rating) > 5)
       return res.status(400).json({ success: false, message: 'Rating must be 1–5' });
     if (!emoji)
       return res.status(400).json({ success: false, message: 'Emoji experience is required' });
 
     const participation = await Participation.findOne({
-      user: req.user._id, event: req.params.eventId,
+      user:  req.user._id,
+      event: req.params.eventId,
     }).populate('event', 'title date location category status');
 
     if (!participation)
       return res.status(404).json({ success: false, message: 'You are not registered for this event' });
 
-    // Allow feedback if: attended, OR event is completed, OR event date has passed
-    const eventPast   = participation.event?.date && new Date(participation.event.date) < new Date();
-    const eventDone   = participation.event?.status === 'completed';
-    const canFeedback = participation.status === 'attended' || eventPast || eventDone;
-    if (!canFeedback)
-      return res.status(403).json({ success: false, message: 'Feedback is only available after the event ends' });
-
     if (participation.feedback?.rating)
-      return res.status(409).json({ success: false, message: 'Feedback already submitted' });
+      return res.status(409).json({ success: false, message: 'You have already submitted feedback for this event' });
 
-    participation.feedback = { rating, emoji, comment: comment || '', submittedAt: new Date() };
+    // Allow feedback if ANY of these are true:
+    // 1. Participation is marked attended
+    // 2. Event status is completed
+    // 3. Event date has already passed
+    const isAttended  = participation.status === 'attended';
+    const isCompleted = participation.event?.status === 'completed';
+    const isPast      = participation.event?.date
+                          ? new Date(participation.event.date) < new Date()
+                          : false;
+
+    if (!isAttended && !isCompleted && !isPast)
+      return res.status(403).json({ success: false, message: 'Feedback is only available after the event has ended' });
+
+    participation.feedback = {
+      rating:      Number(rating),
+      emoji,
+      comment:     comment ? String(comment).trim() : '',
+      submittedAt: new Date(),
+    };
     await participation.save();
 
-    sendAdminFeedbackEmail(req.user, participation.event, participation.feedback).catch(console.error);
-    res.json({ success: true, message: 'Feedback submitted! 🙏', participation });
-  } catch (err) { next(err); }
+    sendAdminFeedbackEmail(req.user, participation.event, participation.feedback)
+      .catch(e => console.error('Feedback email failed:', e.message));
+
+    res.json({ success: true, message: 'Feedback submitted! Thank you 🙏', participation });
+  } catch (err) {
+    console.error('Feedback error:', err.message);
+    next(err);
+  }
 };
 
 // ── GET /api/participation/my-history ─────────────────────
@@ -173,7 +187,7 @@ const getEventParticipants = async (req, res, next) => {
 const getEventFeedback = async (req, res, next) => {
   try {
     const feedbacks = await Participation.find({
-      event: req.params.eventId,
+      event:             req.params.eventId,
       'feedback.rating': { $exists: true },
     }).populate('user', 'name email');
 
