@@ -6,14 +6,16 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../context/NotificationContext';
 import Notification from './Notification';
-
+import { LayoutDashboard } from 'lucide-react';
 const NAV_LINKS = [
   { to: '/',            label: 'Events',       Icon: Home          },
   { to: '/analytics',   label: 'Analytics',    Icon: BarChart2     },
   { to: '/history',     label: 'History',      Icon: Clock         },
   { to: '/certificates',label: 'Certificates', Icon: Award         },
   { to: '/feedback',    label: 'Feedback',     Icon: MessageSquare },
-];
+  { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard, adminOnly: true },
+]
+;
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth();

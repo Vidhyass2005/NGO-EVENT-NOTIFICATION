@@ -20,7 +20,7 @@ import History      from './pages/History';
 import Certificates from './pages/Certificates';
 import Analytics    from './pages/Analytics';
 import Feedback     from './pages/Feedback';
-
+import AdminDashboard from './pages/AdminDashboard';
 const AppLayout = ({ children }) => (
   <div className="min-h-screen">
     <Navbar />
@@ -53,7 +53,7 @@ export default function App() {
                 <Route path="/certificates"element={<Protected><Certificates /></Protected>} />
                 <Route path="/analytics"   element={<Protected><Analytics /></Protected>} />
                 <Route path="/feedback"    element={<Protected><Feedback /></Protected>} />
-
+                <Route path="/dashboard" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
                 {/* Catch-all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
