@@ -66,5 +66,7 @@ export const notificationAPI = {
   markRead: (ids) => API.put('/api/notifications/read', { ids }),
   delete:   (id)  => API.delete(`/api/notifications/${id}`),
 };
-
+export const analyticsAPI = {
+  getStats: () => API.get('/api/analytics/stats'),
+};
 export default API;
