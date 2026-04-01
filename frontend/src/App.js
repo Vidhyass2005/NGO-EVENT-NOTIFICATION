@@ -53,7 +53,7 @@ export default function App() {
                 <Route path="/certificates"element={<Protected><Certificates /></Protected>} />
                 <Route path="/analytics"   element={<Protected><Analytics /></Protected>} />
                 <Route path="/feedback"    element={<Protected><Feedback /></Protected>} />
-                <Route path="/dashboard" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<Protected adminOnly><AdminDashboard /></Protected>} />
                 {/* Catch-all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
