@@ -44,6 +44,7 @@ app.use('/api/participation', require('./routes/participationRoutes'));
 app.use('/api/certificates',  require('./routes/certificateRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/dashboard',     require('./routes/dashboardRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.get('/api/health', (_req, res) => res.json({ status: 'OK', time: new Date() }));
 app.use((_req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 app.use(errorHandler);
